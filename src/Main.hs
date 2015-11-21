@@ -47,7 +47,7 @@ run (Options src w h) = do
                  case pix of
                    Nothing -> return ()
                    Just (f,b) -> do
-                     savePngImage "test.png" (ImageRGB8 b)
+                     --savePngImage "test.png" (ImageRGB8 b)
                      str <- return $ img2ascii conv (f,b)
                      mapM_ (\x -> putStr x >> putStrLn "\x1b[0m") (concat <$> str)
               Nothing -> return ()
