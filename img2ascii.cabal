@@ -20,6 +20,8 @@ executable img2ascii
   main-is:             Main.hs
   -- other-modules:       
   -- other-extensions:    
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base >=4.8 && <4.9,
+                       JuicyPixels,
+                       vector
   hs-source-dirs:      src
   default-language:    Haskell2010
