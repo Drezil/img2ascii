@@ -7,22 +7,43 @@ import Data.Word (Word8)
 import Data.List (transpose)
 import Text.Printf (printf)
 import Control.Arrow ((&&&))
+import Options.Applicative
+import qualified Data.ByteString as B
+import System.IO (stdin)
 
-targetWidth :: Int
-targetWidth = 80
-targetHeight :: Int
-targetHeight = 40
+
+data Options = Options 
+             { srcFile :: String
+             , width :: Int
+             , height :: Int
+             }
+
+options :: Parser Options
+options = Options
+        <$> argument str (metavar "SRC" <> help "source file (or - for stdin)")
+        <*> argument auto (metavar "WIDTH" <> help "resulting width")
+        <*> argument auto (metavar "HEIGH" <> help "resulting height")
+
+opthelp :: ParserInfo Options
+opthelp = info (helper <*> options)
+           ( fullDesc
+           <> progDesc "An image to ASCII-Converter"
+           <> header "img2ascii - convert images to console-compatible text"
+           )
 
 main :: IO ()
-main = do
-       img' <- readImage "test.jpg"
-       case img' of
+main = execParser opthelp >>= run
+
+run :: Options -> IO ()
+run (Options src w h) = do
+       src' <- if src == "-" then B.getContents else B.readFile src
+       case decodeImage src' of
          Left err -> putStrLn err
          Right img -> do
             src <- return $ extractDynImage img
             case src of
               (Just s) -> do
-                 pix <- return $ pixelize s targetWidth targetHeight
+                 pix <- return $ pixelize s w h
                  case pix of
                    Nothing -> return ()
                    Just (f,b) -> do
@@ -30,6 +51,7 @@ main = do
                      str <- return $ img2ascii conv (f,b)
                      mapM_ (\x -> putStr x >> putStrLn "\x1b[0m") (concat <$> str)
               Nothing -> return ()
+
 
 chunksof :: Int -> [a] -> [[a]]
 chunksof _ [] = []
@@ -55,23 +77,23 @@ pixelize :: Image PixelRGB8 -> Int -> Int -> Maybe (Image PixelRGB8,Image PixelR
 pixelize im@(Image iw ih id) tw th =
       if windoww == 0 || windowh == 0 then
           Nothing
-      else Just $ (snd $ generateFoldImage (folder filterfun windoww windowh) im tw th,
-                   snd $ generateFoldImage (folder filterfuninv windoww windowh) im tw th)
+      else Just (snd $ generateFoldImage (folder filterfun windoww windowh) im tw th,
+                 snd $ generateFoldImage (folder filterfuninv windoww windowh) im tw th)
      where
-       windoww = iw `div` tw
-       windowh = ih `div` th
+       windoww = fromIntegral iw / fromIntegral tw
+       windowh = fromIntegral ih / fromIntegral th
 
-folder :: ((PixelRGB8, Int, Int) -> (PixelRGB8, Int, Int) -> (PixelRGB8, Int, Int)) -> Int -> Int -> Image PixelRGB8 -> Int -> Int -> (Image PixelRGB8, PixelRGB8)
+folder :: ((PixelRGB8, Int, Int) -> (PixelRGB8, Int, Int) -> (PixelRGB8, Int, Int)) -> Double -> Double -> Image PixelRGB8 -> Int -> Int -> (Image PixelRGB8, PixelRGB8)
 folder f ww wh im@(Image iw ih id) x y = (im,(\(a,_,_) -> a) $ foldl1 f
     [ (pixelAt im (x'+dx) (y'+dy),dx,dy)
-    | dx <- [-(ww `div` 2)..ww - (ww `div`2)]
-    , dy <- [-(ww `div` 2)..ww - (ww `div`2)]
+    | dx <- [-(floor $ ww / 2)..(floor $ ww*0.5)]
+    , dy <- [-(floor $ ww / 2)..(floor $ ww*0.5)]
     , x'+dx > 0 && x'+dx < iw
     , y'+dy > 0 && y'+dy < ih
     ])
     where
-     x' = x*ww
-     y' = y*wh
+     x' = floor $ fromIntegral x *ww
+     y' = floor $ fromIntegral y *wh
 
 filterfun :: (PixelRGB8,Int,Int) -> (PixelRGB8, Int, Int) -> (PixelRGB8,Int,Int)
 filterfun (x@(PixelRGB8 r g b),_,_) (y@(PixelRGB8 r' g' b'),_,_) = if computeLuma x > computeLuma y then (x,0,0) else (y,0,0)
