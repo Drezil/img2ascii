@@ -12,7 +12,7 @@ import qualified Data.ByteString as B
 import System.IO (stdin)
 
 
-data Options = Options 
+data Options = Options
              { srcFile :: String
              , width :: Int
              , height :: Int
@@ -39,19 +39,12 @@ run (Options src w h) = do
        src' <- if src == "-" then B.getContents else B.readFile src
        case decodeImage src' of
          Left err -> putStrLn err
-         Right img -> do
-            src <- return $ extractDynImage img
-            case src of
-              (Just s) -> do
-                 pix <- return $ pixelize s w h
-                 case pix of
-                   Nothing -> return ()
-                   Just (f,b) -> do
-                     --savePngImage "test.png" (ImageRGB8 b)
-                     str <- return $ img2ascii conv (f,b)
-                     mapM_ (\x -> putStr x >> putStrLn "\x1b[0m") (concat <$> str)
-              Nothing -> return ()
-
+         Right img ->
+            case extractDynImage img >>= pixelize w h of
+                 Nothing -> return ()
+                 Just (f,b) ->
+                     let str = img2ascii conv (f,b)
+                      in mapM_ (\x -> putStr x >> putStrLn "\x1b[0m") (concat <$> str)
 
 chunksof :: Int -> [a] -> [[a]]
 chunksof _ [] = []
@@ -61,7 +54,7 @@ conv :: (PixelRGB8,PixelRGB8) -> String
 conv (fp@(PixelRGB8 fr fg fb),PixelRGB8 br bg bb) = printf "\x1b[48;2;%d;%d;%dm\x1b[38;2;%d;%d;%dm%c" br bg bb fr fg fb (lumi.computeLuma $ fp)
    where
      lumi :: Word8 -> Char
-     lumi x 
+     lumi x
           | x > 225 = '@'
           | x > 180 = 'O'
           | x > 150 = 'X'
@@ -73,8 +66,8 @@ conv (fp@(PixelRGB8 fr fg fb),PixelRGB8 br bg bb) = printf "\x1b[48;2;%d;%d;%dm\
 img2ascii :: ((PixelRGB8,PixelRGB8) -> String) -> (Image PixelRGB8,Image PixelRGB8) -> [[String]]
 img2ascii c (fg@(Image w h _),bg@(Image w' h' _)) = (fmap.fmap) (c.(uncurry (pixelAt fg) &&& uncurry (pixelAt bg))) [[(x,y) | x <- [0..w-1]] | y <- [0..h-1]]
 
-pixelize :: Image PixelRGB8 -> Int -> Int -> Maybe (Image PixelRGB8,Image PixelRGB8)
-pixelize im@(Image iw ih id) tw th =
+pixelize :: Int -> Int -> Image PixelRGB8 -> Maybe (Image PixelRGB8,Image PixelRGB8)
+pixelize tw th im@(Image iw ih id) =
       if windoww == 0 || windowh == 0 then
           Nothing
       else Just (snd $ generateFoldImage (folder filterfun windoww windowh) im tw th,
