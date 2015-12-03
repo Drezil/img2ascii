@@ -14,8 +14,8 @@ import System.IO (stdin)
 
 data Options = Options
              { srcFile :: String
-             , width :: Int
-             , height :: Int
+             , width   :: Int
+             , height  :: Int
              }
 
 options :: Parser Options
@@ -55,12 +55,12 @@ conv (fp@(PixelRGB8 fr fg fb),PixelRGB8 br bg bb) = printf "\x1b[48;2;%d;%d;%dm\
    where
      lumi :: Word8 -> Char
      lumi x
-          | x > 225 = '@'
-          | x > 180 = 'O'
-          | x > 150 = 'X'
-          | x > 50 = 'o'
-          | x > 25 = 'x'
-          | x > 10 = '.'
+          | x > 225   = '@'
+          | x > 180   = 'O'
+          | x > 150   = 'X'
+          | x > 50    = 'o'
+          | x > 25    = 'x'
+          | x > 10    = '.'
           | otherwise = ' '
 
 img2ascii :: ((PixelRGB8,PixelRGB8) -> String) -> (Image PixelRGB8,Image PixelRGB8) -> [[String]]
