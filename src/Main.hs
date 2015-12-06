@@ -16,13 +16,15 @@ data Options = Options
              { srcFile :: String
              , width   :: Int
              , height  :: Int
+             , trueColor :: Bool
              }
 
 options :: Parser Options
 options = Options
         <$> argument str (metavar "SRC" <> help "source file (or - for stdin)")
         <*> argument auto (metavar "WIDTH" <> help "resulting width")
-        <*> argument auto (metavar "HEIGH" <> help "resulting height")
+        <*> argument auto (metavar "HEIGHT" <> help "resulting height")
+        <*> flag True False (long "256-colors" <> short 'c' <> help "only use 256-color-mode for old terminals")
 
 opthelp :: ParserInfo Options
 opthelp = info (helper <*> options)
@@ -35,7 +37,7 @@ main :: IO ()
 main = execParser opthelp >>= run
 
 run :: Options -> IO ()
-run (Options src w h) = do
+run (Options src w h c) = do
        src' <- if src == "-" then B.getContents else B.readFile src
        case decodeImage src' of
          Left err -> putStrLn err
@@ -43,7 +45,7 @@ run (Options src w h) = do
             case extractDynImage img >>= pixelize w h of
                  Nothing -> return ()
                  Just (f,b) ->
-                     let str = img2ascii conv (f,b)
+                     let str = if c then img2ascii conv (f,b) else img2ascii conv256 (f,b)
                       in mapM_ (\x -> putStr x >> putStrLn "\x1b[0m") (concat <$> str)
 
 chunksof :: Int -> [a] -> [[a]]
@@ -53,6 +55,24 @@ chunksof c xs = take c xs : chunksof c (drop c xs)
 conv :: (PixelRGB8,PixelRGB8) -> String
 conv (fp@(PixelRGB8 fr fg fb),PixelRGB8 br bg bb) = printf "\x1b[48;2;%d;%d;%dm\x1b[38;2;%d;%d;%dm%c" br bg bb fr fg fb (lumi.computeLuma $ fp)
    where
+     lumi :: Word8 -> Char
+     lumi x
+          | x > 225   = '@'
+          | x > 180   = 'O'
+          | x > 150   = 'X'
+          | x > 50    = 'o'
+          | x > 25    = 'x'
+          | x > 10    = '.'
+          | otherwise = ' '
+
+conv256 :: (PixelRGB8,PixelRGB8) -> String
+conv256 (fp@(PixelRGB8 fr fg fb),PixelRGB8 br bg bb) = printf "\x1b[48;5;%dm\x1b[38;5;%dm%c" bcolor fcolor (lumi.computeLuma $ fp)
+   where
+     -- converts [0..255] -> [0..5]
+     s = (`div` 51)
+     -- conversion: 6x6x6 rgb-cube so color is red * 36 + green * 6 + blue + 16 offset with red/green/blue in [0..5]
+     bcolor = s br * 36 + s bg * 6 + s bb + 16
+     fcolor = s fr * 36 + s fg * 6 + s fb + 16
      lumi :: Word8 -> Char
      lumi x
           | x > 225   = '@'
