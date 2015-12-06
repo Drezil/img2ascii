@@ -24,7 +24,7 @@ options = Options
         <$> argument str (metavar "SRC" <> help "source file (or - for stdin)")
         <*> argument auto (metavar "WIDTH" <> help "resulting width")
         <*> argument auto (metavar "HEIGHT" <> help "resulting height")
-        <*> flag True False (long "256-colors" <> short 'c' <> help "only use 256-color-mode for old terminals")
+        <*> switch (long "256-colors" <> short 'c' <> help "only use 256-color-mode for old terminals")
 
 opthelp :: ParserInfo Options
 opthelp = info (helper <*> options)
