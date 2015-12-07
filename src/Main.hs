@@ -4,7 +4,7 @@ import Codec.Picture
 import Codec.Picture.Types
 import Data.Maybe (fromJust)
 import Data.Word (Word8)
-import Data.List (transpose)
+import Data.List as L (transpose,foldl')
 import Text.Printf (printf)
 import Control.Arrow ((&&&))
 import Options.Applicative
@@ -97,16 +97,17 @@ pixelize tw th im@(Image iw ih id) =
        windowh = fromIntegral ih / fromIntegral th
 
 folder :: ((PixelRGB8, Int, Int) -> (PixelRGB8, Int, Int) -> (PixelRGB8, Int, Int)) -> Double -> Double -> Image PixelRGB8 -> Int -> Int -> (Image PixelRGB8, PixelRGB8)
-folder f ww wh im@(Image iw ih id) x y = (im,(\(a,_,_) -> a) $ foldl1 f
+folder f ww wh im@(Image iw ih id) x y = (im,(\(a,_,_) -> a) $ L.foldl' f (pixelAt im x' y',0,0)
     [ (pixelAt im (x'+dx) (y'+dy),dx,dy)
-    | dx <- [-(floor $ ww / 2)..(floor $ ww*0.5)]
-    , dy <- [-(floor $ ww / 2)..(floor $ ww*0.5)]
+    | dx <- [-dw..dw]
+    , dy <- [-dw..dw]
     , x'+dx > 0 && x'+dx < iw
     , y'+dy > 0 && y'+dy < ih
     ])
     where
-     x' = floor $ fromIntegral x *ww
-     y' = floor $ fromIntegral y *wh
+     dw = floor $ ww
+     x' = floor $ fromIntegral x * ww
+     y' = floor $ fromIntegral y * wh
 
 filterfun :: (PixelRGB8,Int,Int) -> (PixelRGB8, Int, Int) -> (PixelRGB8,Int,Int)
 filterfun (x@(PixelRGB8 r g b),_,_) (y@(PixelRGB8 r' g' b'),_,_) = if computeLuma x > computeLuma y then (x,0,0) else (y,0,0)
