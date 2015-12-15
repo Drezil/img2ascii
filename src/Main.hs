@@ -37,7 +37,7 @@ main :: IO ()
 main = execParser opthelp >>= run
 
 run :: Options -> IO ()
-run (Options src w h c) = do
+run (Options src w h redcol) = do
        src' <- if src == "-" then B.getContents else B.readFile src
        case decodeImage src' of
          Left err -> putStrLn err
@@ -45,7 +45,7 @@ run (Options src w h c) = do
             case extractDynImage img >>= pixelize w h of
                  Nothing -> return ()
                  Just (f,b) ->
-                     let str = if c then img2ascii conv (f,b) else img2ascii conv256 (f,b)
+                     let str = if redcol then img2ascii conv256 (f,b) else img2ascii conv (f,b)
                       in mapM_ (\x -> putStr x >> putStrLn "\x1b[0m") (concat <$> str)
 
 chunksof :: Int -> [a] -> [[a]]
