@@ -73,7 +73,7 @@ pixelize tw th im@(Image iw ih id) =
       else Just (snd $ generateFoldImage (folder filterfun windoww windowh) im tw th,
                  snd $ generateFoldImage (folder filterfuninv windoww windowh) im tw th)
      where
-       windoww = fromIntegral iw / fromIntegral tw
+       windoww = (fromIntegral iw) / fromIntegral tw
        windowh = fromIntegral ih / fromIntegral th
 
 folder :: ((PixelRGB8, Int, Int) -> (PixelRGB8, Int, Int) -> (PixelRGB8, Int, Int)) -> Double -> Double -> Image PixelRGB8 -> Int -> Int -> (Image PixelRGB8, PixelRGB8)
