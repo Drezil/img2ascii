@@ -1,4 +1,5 @@
 [![Issue Count](https://codeclimate.com/github/Drezil/img2ascii/badges/issue_count.svg)](https://codeclimate.com/github/Drezil/img2ascii)
+[![Build Status](https://travis-ci.org/Drezil/img2ascii.svg?branch=master)](https://travis-ci.org/Drezil/img2ascii)
 
 # img2ascii
 Image to ASCII-Converter
